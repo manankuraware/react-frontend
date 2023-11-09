@@ -1,51 +1,66 @@
-import {
-  experimental_useOptimistic as useOptimistic,
-  useState,
-  useRef,
-} from "react";
-import { deliverMessage } from "./actions.js";
+import { useState, useEffect } from "react";
+import { experimental_useEffectEvent as useEffectEvent } from "react";
+import "./App.css";
 
-function Thread({ messages, sendMessage }) {
-  const formRef = useRef();
-  async function formAction(formData) {
-    addOptimisticMessage(formData.get("message"));
-    formRef.current.reset();
-    await sendMessage(formData);
-  }
-  const [optimisticMessages, addOptimisticMessage] = useOptimistic(
-    messages,
-    (state, newMessage) => [
-      ...state,
-      {
-        text: newMessage,
-        sending: true,
-      },
-    ]
-  );
+export default function Timer() {
+  const [count, setCount] = useState(0);
+  const [increment, setIncrement] = useState(1);
+  const [delay, setDelay] = useState(100);
+
+  const onTick = useEffectEvent(() => {
+    setCount((c) => c + increment);
+  });
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      onTick();
+    }, delay);
+    return () => clearInterval(intervalId);
+  }, [delay, onTick]);
+
+  const handleReset = () => {
+    setCount(0);
+  };
+
+  const handleIncrementDecrease = () => {
+    if (increment === 0) return;
+    setIncrement((i) => i - 1);
+  };
+
+  const handleIncrementIncrease = () => {
+    setIncrement((i) => i + 1);
+  };
+
+  const handleDelayDecrease = () => {
+    if (delay === 100) return;
+    setDelay((d) => d - 100);
+  };
+
+  const handleDelayIncrease = () => {
+    setDelay((d) => d + 100);
+  };
 
   return (
-    <>
-      {optimisticMessages.map((message, index) => (
-        <div key={index}>
-          {message.text}
-          {!!message.sending && <small> (Sending...)</small>}
-        </div>
-      ))}
-      <form action={formAction} ref={formRef}>
-        <input type="text" name="message" placeholder="Hello!" />
-        <button type="submit">Send</button>
-      </form>
-    </>
+    <div className="wrapper">
+      <h1 className="header">
+        Counter: {count}
+        <button onClick={handleReset}>Reset</button>
+      </h1>
+      <hr />
+      <p>
+        Increment by:
+        <button onClick={handleIncrementDecrease}>-</button>
+        <b>{increment}</b>
+        <button onClick={handleIncrementIncrease}>+</button>
+      </p>
+      <p>
+        Increment delay:
+        <button disabled={delay === 100} onClick={handleDelayDecrease}>
+          -100 ms
+        </button>
+        <b>{delay} ms</b>
+        <button onClick={handleDelayIncrease}>+100 ms</button>
+      </p>
+    </div>
   );
-}
-
-export default function App() {
-  const [messages, setMessages] = useState([
-    { text: "Hello there!", sending: false, key: 1 },
-  ]);
-  async function sendMessage(formData) {
-    const sentMessage = await deliverMessage(formData.get("message"));
-    setMessages([...messages, { text: sentMessage }]);
-  }
-  return <Thread messages={messages} sendMessage={sendMessage} />;
 }
